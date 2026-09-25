@@ -2,7 +2,7 @@
 
 SolarIS is a full-stack, real-time SCADA (Supervisory Control and Data Acquisition) system designed for monitoring, analytics, and active control of remote solar panel cleaning fleets. 
 
-This repository features a luxury-minimalist HMI frontend, a secure API relay gateway, and a hardware abstraction layer (HAL) supporting both **virtual edge simulation** and **physical STM32 hardware deployment** via cellular/MQTT channels.
+This repository features a luxury-minimalist HMI frontend, a secure API relay gateway, and a hardware abstraction layer (HAL) supporting both **virtual edge simulation** and **physical STM32 hardware deployment** over **cellular REST API** channels.
 
 ---
 
@@ -13,8 +13,8 @@ If your background is in hardware design, firmware, or PLCs, here is how the sof
 | Software Component | SCADA/Hardware Equivalent | Purpose |
 | :--- | :--- | :--- |
 | **React UI (Frontend)** | **HMI (Human Machine Interface)** | The monitoring screen displaying live gauges, dial readouts, telemetry plots, and operational controls. |
-| **Node.js (Backend Gateway)** | **SCADA Master Unit / Gateway** | The central controller that listens for incoming telemetry, parses data packets, logs them to the historian, and dispatches command overrides. |
-| **MongoDB (Database)** | **Data Historian** | The central log storage. It records all historical readings chronologically for charting, trend analysis, and PDF report creation. |
+| **Node.js (Backend Gateway)** | **SCADA Master Unit / Gateway** | The central controller that exposes REST endpoints, ingests incoming telemetry, parses data packets, logs them to the historian, and dispatches command overrides. |
+| **MySQL / MariaDB (Database)** | **Data Historian** | The central log storage. It records all historical readings chronologically for charting, trend analysis, and PDF report creation. |
 | **Python Simulator** | **Virtual Test Bench (RTU Node)** | Acts as a software-simulated Remote Terminal Unit (RTU) out in the field. It simulates sensors (thermocouples, light meters, current sensors) and cleaning panel motors. |
 
 ---
@@ -43,7 +43,7 @@ The system ingests hardware telemetry packets containing essential solar sensor 
     *    **Night**: Irradiance is zero, solar panel generation inactive.
     *    **Fault**: Actuator or voltage abnormalities flagged.
     *    **Offline**: No signal received for $>30$ seconds.
-*   Real-time meteorological validation integrated via the Open-Meteo API.
+*   Real-time meteorological validation integrated via the Open-Meteo REST API.
 
 ### 3. Actuator Control Center (Active Command Link)
 *   Provides manual overrides for field cleaning mechanisms:
@@ -75,9 +75,10 @@ You must install the following software tools to run this system locally:
 
 1.  **Node.js (v18.x or higher)**: [Download Node.js](https://nodejs.org/)
 2.  **Python (v3.9 or higher)**: [Download Python](https://www.python.org/)
+3.  **MySQL (v8.x) or MariaDB (v10.x+)**: [Download MySQL](https://dev.mysql.com/downloads/) — a running server the backend and Python simulator connect to.
 
 > [!NOTE]
-> You **do not** need to install MongoDB on your system. The backend uses an automatic, local, in-memory MongoDB server (`mongodb-memory-server`) that spins up on port `27017` automatically.
+> Both the Node.js backend and the Python simulator read the **same** MySQL/MariaDB connection details from `backend/.env`. Create an empty database (e.g. `solar_scada`) and set `DB_NAME` to match; the schema is created for you by the init step below.
 
 ---
 
@@ -91,13 +92,15 @@ Create a virtual environment named `solarvenv` in the **root** folder and instal
 *   **On macOS / Linux:**
     ```bash
     python3 -m venv solarvenv
-    ./solarvenv/bin/pip install flask==3.0.3 pandas==2.2.2 numpy==1.26.4 scikit-learn==1.5.1 python-dotenv flask-cors pymongo requests aiohttp
+    ./solarvenv/bin/pip install -r requirements.txt
     ```
 *   **On Windows:**
     ```powershell
     python -m venv solarvenv
-    .\solarvenv\Scripts\pip install flask==3.0.3 pandas==2.2.2 numpy==1.26.4 scikit-learn==1.5.1 python-dotenv flask-cors pymongo requests aiohttp
+    .\solarvenv\Scripts\pip install -r requirements.txt
     ```
+
+> The Python stack uses **PyMySQL** to talk to MySQL/MariaDB (no MongoDB driver required).
 
 ### 2. Install Node.js Dependencies
 Install the package dependencies in the project directories:
@@ -117,20 +120,30 @@ cd ..
 Create a `.env` file inside the `backend/` folder:
 ```env
 PORT=5050
-MONGO_URI=mongodb://127.0.0.1:27017/solar_scada
 DATA_SOURCE=SIMULATOR
+
+# --- MySQL / MariaDB connection (used by both the Node backend and Python simulator) ---
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=solar_scada
+DB_POOL_SIZE=10
+
+# --- External REST services (per-farm keys/tokens are stored in the DB, not here) ---
+THINGSPEAK_BASE=https://api.thingspeak.com
+BLYNK_BASE=https://blr1.blynk.cloud
 ```
 
-### 4. Initialize & Seed Database
-Start the MongoDB memory server first to download the MongoDB binary and seed the database:
+> MQTT is **not** required. Telemetry ingest and device control run over REST APIs (ThingSpeak / Blynk). The optional `MQTT_URL` is left blank, which keeps the MQTT listener disabled.
+
+### 4. Initialize the Database
+With your MySQL/MariaDB server running and the empty `DB_NAME` database created, build the schema and seed mock telemetry:
 ```bash
-# Terminal 1: Start the in-memory database server
-npm run start:db
-
-# Terminal 2: Seed the mock telemetry records
-node backend/scripts/seedReadings.js
+# Creates the tables and inserts sample readings
+npm run init:db
 ```
-*(Once seeded successfully with "Success: Inserted 300 records", you can stop/close Terminal 1 and 2).*
+*(This runs `backend/initDb.js` against the connection defined in `backend/.env`.)*
 
 ### 5. Fire Ignition (Run Everything Concurrently)
 Now start the HMI Frontend, Gateway API, and Edge Simulator concurrently in a single command:
@@ -150,16 +163,17 @@ npm run ignition
 
 ##  Connecting Actual Hardware (STM32 + SIMCOM Module)
 
-SolarIS abstracts the telemetry source. When transitioning from simulated nodes to actual physical cellular modems sending packets from the field:
+SolarIS abstracts the telemetry source. Communication with physical field hardware is done entirely over **REST APIs** — no MQTT broker is required. When transitioning from simulated nodes to actual cellular modems sending packets from the field:
 
-1.  Setup an **MQTT Broker** (e.g., Mosquitto, EMQX, or HiveMQ) on your server.
-2.  Configure your STM32 microcontrollers to publish their 64-byte telemetry payloads in JSON format to the broker.
-3.  Edit the central Gateway configuration file: [BACKEND/.env](file:///Users/MedhanshNagpal/Desktop/Kunjika/solar-farm-dashboard/BACKEND/.env):
+1.  Configure your STM32 microcontrollers to push their telemetry payloads in JSON format to a REST endpoint — either the backend's own ingest route or a **ThingSpeak** channel that the gateway reads.
+2.  Store each farm's **ThingSpeak** (telemetry) and **Blynk** (control) keys/tokens in the database against that farm's record. These are read per-farm at runtime, so they are not placed in `.env`.
+3.  Edit the central Gateway configuration file `backend/.env`:
     ```env
     # Change data source from SIMULATOR to PHYSICAL
     DATA_SOURCE=PHYSICAL
-    
-    # Configure your MQTT Broker URL
-    MQTT_BROKER_URL=mqtt://your-broker-ip-address:1883
+
+    # REST service bases (override only if you use a different region/host)
+    THINGSPEAK_BASE=https://api.thingspeak.com
+    BLYNK_BASE=https://blr1.blynk.cloud
     ```
-4.  Restart your Node.js backend Gateway (`node server.js`). The gateway will now subscribe to live cellular hardware nodes, log their telemetry directly, and route your UI command overrides back to the physical devices.
+4.  Restart your Node.js backend Gateway (`node server.js`). The gateway will now read live telemetry from the devices' REST channels, log it to MySQL, and route your UI command overrides back to the physical devices via the Blynk REST API (virtual-pin writes).
