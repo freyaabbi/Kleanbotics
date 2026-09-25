@@ -1,0 +1,49 @@
+# --- IoT & Telemetry Data ---
+*.csv
+*.json
+*.log
+*.dat
+data/
+dumps/
+telemetry_cache/
+
+# --- Frontend (Node / React) ---
+node_modules/
+/frontend/node_modules/
+.pnp
+.pnp.js
+dist/
+build/
+
+# --- Backend (Python & ML) ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv
+venv/
+solarvenv/
+ENV/
+env/
+.pytest_cache/
+
+# --- Databases & Tracking ---
+*.db
+*.sqlite
+mlruns/
+.mlflow/
+
+# --- Environment Variables (Credentials) ---
+.env
+.env.local
+.env.*.local
+
+# --- Claude Code local settings & memory (personal) ---
+.claude/
+
+# --- Re-include essential JSON configs (override the blanket *.json above) ---
+!**/package.json
+!**/package-lock.json
+!**/tsconfig.json
+!**/jsconfig.json
+!**/manifest.json
+!**/asset-manifest.json

@@ -1,0 +1,105 @@
+/* stylelint-disable at-rule-no-unknown */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import 'leaflet/dist/leaflet.css';
+
+/* ============================================================
+   Design tokens as R G B channels so Tailwind can apply alpha
+   (rgb(var(--x) / <alpha>)) AND a .dark class can flip them.
+   ============================================================ */
+:root {
+  --page: 247 249 251;      /* #F7F9FB */
+  --surface: 255 255 255;   /* #FFFFFF */
+  --sunk: 241 244 248;      /* #F1F4F8 */
+  --border: 227 232 239;    /* #E3E8EF */
+
+  --text: 15 23 42;         /* #0F172A */
+  --muted: 100 116 139;     /* #64748B */
+
+  --accent: 5 150 105;      /* #059669 */
+  --accent-fill: 16 185 129;/* #10B981 */
+  --soft: 236 253 245;      /* #ECFDF5 */
+
+  --warn: 217 119 6;   --warn-soft: 255 251 235;
+  --danger: 220 38 38; --danger-soft: 254 242 242;
+  --info: 37 99 235;
+
+  --elev: 0 1px 2px rgba(15, 23, 42, .04);
+
+  --heat-ok: #10B981;
+  --heat-warn: #F59E0B;
+  --heat-bad: #DC2626;
+}
+
+.dark {
+  --page: 8 12 22;          /* deep slate */
+  --surface: 17 24 39;      /* #111827 */
+  --sunk: 30 41 59;         /* #1E293B */
+  --border: 40 52 74;       /* muted navy */
+
+  --text: 226 232 240;      /* #E2E8F0 */
+  --muted: 148 163 184;     /* #94A3B8 */
+
+  --accent: 52 211 153;     /* brighter green for contrast */
+  --accent-fill: 16 185 129;
+  --soft: 16 61 46;         /* dark green tint */
+
+  --warn: 251 191 36;   --warn-soft: 61 44 12;
+  --danger: 248 113 113; --danger-soft: 60 26 26;
+  --info: 96 165 250;
+
+  --elev: 0 1px 2px rgba(0, 0, 0, .35);
+}
+
+body {
+  background: rgb(var(--page));
+  color: rgb(var(--text));
+}
+
+/* ============================================================
+   Elevation: border + a whisper of shadow, never a drop shadow.
+   ============================================================ */
+.shadow-lg,
+.shadow-xl,
+.shadow-2xl {
+  box-shadow: var(--elev) !important;
+}
+
+.elev {
+  border: 1px solid rgb(var(--border));
+  box-shadow: var(--elev);
+}
+
+/* All-caps micro label */
+.micro {
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: rgb(var(--muted));
+}
+
+/* ============================================================
+   Panel tile heat scale (green -> amber -> red) with a pattern
+   overlay so states stay distinguishable for colorblind viewers.
+   ============================================================ */
+.heat-ok {
+  background-color: var(--heat-ok);
+}
+.heat-warn {
+  background-color: var(--heat-warn);
+  background-image: repeating-linear-gradient(45deg, rgba(15, 23, 42, .22) 0 2px, transparent 2px 5px);
+}
+.heat-bad {
+  background-color: var(--heat-bad);
+  background-image: repeating-linear-gradient(-45deg, rgba(255, 255, 255, .45) 0 1.5px, transparent 1.5px 4px);
+}
+
+/* Leaflet popup: match the light surface tokens */
+.leaflet-popup-content-wrapper {
+  border-radius: 20px;
+  border: 1px solid rgb(var(--border));
+  box-shadow: var(--elev);
+}

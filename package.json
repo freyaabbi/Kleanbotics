@@ -1,0 +1,25 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start:ui": "cd frontend && npm start",
+    "start:api": "cd backend && npm start",
+    "start:edge": "cd backend\\scripts\\bot-simulator && ..\\..\\..\\solarvenv\\Scripts\\python main.py",
+    "init:db": "cd backend && node initDb.js",
+    "ignition": "concurrently \"npm run start:api\" \"npm run start:ui\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://gitolite@codex.cro.st.com/solar-farm-dashboard/solar-farm-dashboard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
