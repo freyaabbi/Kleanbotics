@@ -19,7 +19,7 @@ If your background is in hardware design, firmware, or PLCs, here is how the sof
 
 ---
 
-## 📊 Telemetry Packet Structure (64-byte payload equivalent)
+##  Telemetry Packet Structure (64-byte payload equivalent)
 
 The system ingests hardware telemetry packets containing essential solar sensor diagnostics. Deployed nodes report:
 
