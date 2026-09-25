@@ -1,4 +1,4 @@
-# 🌍 SolarIS: Enterprise SCADA Management & Fleet Analytics
+#  SolarIS: Enterprise SCADA Management & Fleet Analytics
 
 SolarIS is a full-stack, real-time SCADA (Supervisory Control and Data Acquisition) system designed for monitoring, analytics, and active control of remote solar panel cleaning fleets. 
 
@@ -6,7 +6,7 @@ This repository features a luxury-minimalist HMI frontend, a secure API relay ga
 
 ---
 
-## 🏗️ How the Software Maps to Hardware (Concept Guide)
+##  How the Software Maps to Hardware (Concept Guide)
 
 If your background is in hardware design, firmware, or PLCs, here is how the software stack corresponds to standard electrical engineering components:
 
@@ -30,7 +30,7 @@ The system ingests hardware telemetry packets containing essential solar sensor 
 
 ---
 
-## 🌟 Core System Features
+##  Core System Features
 
 ### 1. Unified HMI Login (Role-Based Access Control)
 *   **Operations Analyst (Viewer/User)**: Designed for view-only operators. Provides access to the Operations Map, Alerts Log, and Reports Tab. Restricts the ability to issue motor override commands or register/remove solar hubs.
@@ -39,10 +39,10 @@ The system ingests hardware telemetry packets containing essential solar sensor 
 ### 2. Live Fleet Map & Weather Dashboard
 *   Geospatial map rendering marker pins for all deployed solar installations.
 *   Color-coded markers show live hub statuses at a glance:
-    *   🟢 **Active**: Normal daylight generation.
-    *   🌙 **Night**: Irradiance is zero, solar panel generation inactive.
-    *   🔴 **Fault**: Actuator or voltage abnormalities flagged.
-    *   ⚪ **Offline**: No signal received for $>30$ seconds.
+    *    **Active**: Normal daylight generation.
+    *    **Night**: Irradiance is zero, solar panel generation inactive.
+    *    **Fault**: Actuator or voltage abnormalities flagged.
+    *    **Offline**: No signal received for $>30$ seconds.
 *   Real-time meteorological validation integrated via the Open-Meteo API.
 
 ### 3. Actuator Control Center (Active Command Link)
@@ -69,7 +69,7 @@ The system ingests hardware telemetry packets containing essential solar sensor 
 
 ---
 
-## 🛠️ Software Pre-requisites
+##  Software Pre-requisites
 
 You must install the following software tools to run this system locally:
 
@@ -81,7 +81,7 @@ You must install the following software tools to run this system locally:
 
 ---
 
-## 🚀 Step-by-Step Installation and Launch Guide
+##  Step-by-Step Installation and Launch Guide
 
 Follow these steps to set up and start the complete SCADA simulation fleet:
 
@@ -141,14 +141,14 @@ npm run ignition
 
 ---
 
-## 🔐 Credentials & Login Levels
+## Credentials & Login Levels
 
 *   **Operations Analyst**: Select the **Operations** card and click **Establish Connection** (no password required).
 *   **System Administrator**: Select the **Administrator** card, enter password **`admin`**, and click **Establish Connection**.
 
 ---
 
-## 🔌 Connecting Actual Hardware (STM32 + SIMCOM Module)
+##  Connecting Actual Hardware (STM32 + SIMCOM Module)
 
 SolarIS abstracts the telemetry source. When transitioning from simulated nodes to actual physical cellular modems sending packets from the field:
 
