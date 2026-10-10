@@ -2,11 +2,12 @@ import express from "express";
 import { getFarms, addFarm, deleteFarm } from "../controllers/farmController.js";
 import { getRows, getRowPanels } from "../controllers/layoutController.js";
 import { getRowCompare, getMaintenanceQueue, getReplay } from "../controllers/explorerController.js";
+import { requireAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
 
 router.get("/", getFarms);
-router.post("/", addFarm);
+router.post("/", requireAdmin, addFarm);
 
 // --- Fleet hierarchy drill-down (Farm › Row › Panel) ---
 router.get("/:id/rows/compare", getRowCompare);     // overlay 2–5 rows on one chart
@@ -17,6 +18,6 @@ router.get("/:id/rows/:rowNo/panels", getRowPanels); // panel strip for a row
 router.get("/:id/maintenance", getMaintenanceQueue); // ranked by lost kWh
 router.get("/:id/replay", getReplay);                // day-replay fault timeline
 
-router.delete("/:id", deleteFarm);
+router.delete("/:id", requireAdmin, deleteFarm);
 
 export default router;

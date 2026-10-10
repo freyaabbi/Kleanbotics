@@ -1,6 +1,7 @@
 // backend/routes/commandRoutes.js
 import express from 'express';
 import { executeCommand, getPendingCommands, ackCommands } from '../controllers/commandController.js';
+import { requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ const router = express.Router();
  * Dashboard → server. Body: { farm_id, command, value }.
  * With no Blynk/MQTT the command is queued (status PENDING) for REST pickup.
  */
-router.post('/send', executeCommand);
+router.post('/send', requireAdmin, executeCommand);
 
 /**
  * GET /api/commands/pending/:farmId

@@ -10,6 +10,7 @@ import farmRoutes from "./routes/farmRoutes.js";
 import panelRoutes from "./routes/panelRoutes.js";
 import telemetryRoutes from "./routes/telemetryRoutes.js";
 import controlRoutes from "./routes/controlRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
 
 // Load environment variables
 dotenv.config();
@@ -21,6 +22,9 @@ app.use(cors());
 app.use(express.json());
 
 // --- ROUTES ---
+// Login / token issuance (admin password validated server-side)
+app.use("/api/auth", authRoutes);
+
 // Handles fetching telemetry data and triggering simulated faults
 app.use("/api/fakedataRoutes", fakeDataRoutes);
 

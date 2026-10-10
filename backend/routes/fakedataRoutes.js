@@ -4,6 +4,7 @@ import {
   triggerFault,
   getRobotHistory
 } from "../controllers/fakeDataController.js";
+import { requireAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -25,6 +26,6 @@ router.get("/robot-history/:farmId", getRobotHistory);
  * Purpose: Relays a UI command to the Python simulator (Port 8085).
  * Payload: { farm_id: "delhi_north", fault_id: "F1" }
  */
-router.post("/trigger-fault", triggerFault);
+router.post("/trigger-fault", requireAdmin, triggerFault);
 
 export default router;
