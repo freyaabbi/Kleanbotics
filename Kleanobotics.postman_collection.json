@@ -1,0 +1,369 @@
+{
+  "info": {
+    "name": "Kleanobotics SCADA API",
+    "description": "Backend REST API for the Kleanobotics solar-farm dashboard.\n\nAuth:\n- Admin actions use a JWT: run **Auth > Login (Admin)** first — it auto-saves the token into the `token` collection variable, which the admin requests send as `Authorization: Bearer {{token}}`.\n- Robot actions use `x-api-key: {{apiKey}}` (only enforced if INGEST_API_KEY is set in backend/.env).\n\nSet `baseUrl` to http://localhost:5050 (default) or http://<laptop-LAN-IP>:5050 when calling from the robot.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5050", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "apiKey", "value": "", "type": "string" },
+    { "key": "farmId", "value": "ABC", "type": "string" },
+    { "key": "panelId", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.token) {",
+                  "  pm.collectionVariables.set('token', res.token);",
+                  "  console.log('Saved admin token to {{token}}');",
+                  "}",
+                  "pm.test('login ok', () => pm.expect(res.success).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\",\n  \"password\": \"admin\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Login (Viewer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.token) { pm.collectionVariables.set('token', res.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"user\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Me (verify token)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/me", "host": ["{{baseUrl}}"], "path": ["api", "auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Farms",
+      "item": [
+        {
+          "name": "List farms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/farms", "host": ["{{baseUrl}}"], "path": ["api", "farms"] }
+          }
+        },
+        {
+          "name": "Add farm (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farm_id\": \"delhi_east\",\n  \"name\": \"Delhi East Plant\",\n  \"city\": \"Delhi\",\n  \"capacity\": 250,\n  \"lat\": 28.6519,\n  \"lng\": 77.2315\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/farms", "host": ["{{baseUrl}}"], "path": ["api", "farms"] }
+          }
+        },
+        {
+          "name": "Delete farm (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/farms/delhi_east", "host": ["{{baseUrl}}"], "path": ["api", "farms", "delhi_east"] }
+          }
+        },
+        {
+          "name": "Farm rows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/farms/{{farmId}}/rows", "host": ["{{baseUrl}}"], "path": ["api", "farms", "{{farmId}}", "rows"] }
+          }
+        },
+        {
+          "name": "Compare rows",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/farms/{{farmId}}/rows/compare?rows=1,2,3",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "farms", "{{farmId}}", "rows", "compare"],
+              "query": [{ "key": "rows", "value": "1,2,3" }]
+            }
+          }
+        },
+        {
+          "name": "Row panels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/farms/{{farmId}}/rows/1/panels", "host": ["{{baseUrl}}"], "path": ["api", "farms", "{{farmId}}", "rows", "1", "panels"] }
+          }
+        },
+        {
+          "name": "Maintenance queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/farms/{{farmId}}/maintenance", "host": ["{{baseUrl}}"], "path": ["api", "farms", "{{farmId}}", "maintenance"] }
+          }
+        },
+        {
+          "name": "Day replay",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/farms/{{farmId}}/replay", "host": ["{{baseUrl}}"], "path": ["api", "farms", "{{farmId}}", "replay"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Panels",
+      "item": [
+        {
+          "name": "Panel detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/panels/{{panelId}}", "host": ["{{baseUrl}}"], "path": ["api", "panels", "{{panelId}}"] }
+          }
+        },
+        {
+          "name": "Panel history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/panels/{{panelId}}/history", "host": ["{{baseUrl}}"], "path": ["api", "panels", "{{panelId}}", "history"] }
+          }
+        },
+        {
+          "name": "Panel action (clean/replace)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"action\": \"clean\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/panels/{{panelId}}/action", "host": ["{{baseUrl}}"], "path": ["api", "panels", "{{panelId}}", "action"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Commands",
+      "item": [
+        {
+          "name": "Send command (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"farm_id\": \"{{farmId}}\",\n  \"command\": \"SET_RPM\",\n  \"value\": 55\n}" },
+            "url": { "raw": "{{baseUrl}}/api/commands/send", "host": ["{{baseUrl}}"], "path": ["api", "commands", "send"] }
+          }
+        },
+        {
+          "name": "Poll pending (Robot)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "x-api-key", "value": "{{apiKey}}" }],
+            "url": { "raw": "{{baseUrl}}/api/commands/pending/{{farmId}}", "host": ["{{baseUrl}}"], "path": ["api", "commands", "pending", "{{farmId}}"] }
+          }
+        },
+        {
+          "name": "Ack commands (Robot)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"ids\": [1]\n}" },
+            "url": { "raw": "{{baseUrl}}/api/commands/ack", "host": ["{{baseUrl}}"], "path": ["api", "commands", "ack"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Telemetry",
+      "item": [
+        {
+          "name": "Ingest reading (Robot)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-api-key", "value": "{{apiKey}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"farm_id\": \"{{farmId}}\",\n  \"device_id\": 1,\n  \"motor_speed\": 120.5,\n  \"motor_pwm\": 180,\n  \"motor_direction\": \"FORWARD\",\n  \"motor_status\": \"RUNNING\",\n  \"battery_percentage\": 87,\n  \"battery_v\": 12.4,\n  \"temperature\": 34.2,\n  \"humidity\": 41,\n  \"voltage_solar_panel\": 18.9,\n  \"running_current\": 2.1,\n  \"ac_power_kw\": 0.75,\n  \"power_state\": 1,\n  \"rain_status\": 0,\n  \"obstacle_detected\": 0,\n  \"alarm_active\": 0,\n  \"error_code\": 0\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/telemetry/ingest", "host": ["{{baseUrl}}"], "path": ["api", "telemetry", "ingest"] }
+          }
+        },
+        {
+          "name": "Probe channel",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/telemetry/probe?channel=12397&key=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "telemetry", "probe"],
+              "query": [
+                { "key": "channel", "value": "12397" },
+                { "key": "key", "value": "" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Last snapshot",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/telemetry/{{farmId}}/last", "host": ["{{baseUrl}}"], "path": ["api", "telemetry", "{{farmId}}", "last"] }
+          }
+        },
+        {
+          "name": "History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/telemetry/{{farmId}}/history?days=1&average=60",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "telemetry", "{{farmId}}", "history"],
+              "query": [
+                { "key": "days", "value": "1" },
+                { "key": "average", "value": "60" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "History (reports)",
+      "item": [
+        {
+          "name": "Machine history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/machines/history?device_id={{farmId}}&interval=60",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "machines", "history"],
+              "query": [
+                { "key": "device_id", "value": "{{farmId}}" },
+                { "key": "interval", "value": "60" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fake-data / Simulator",
+      "item": [
+        {
+          "name": "Dashboard snapshot",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/fakedataRoutes/fake-data", "host": ["{{baseUrl}}"], "path": ["api", "fakedataRoutes", "fake-data"] }
+          }
+        },
+        {
+          "name": "Robot history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/fakedataRoutes/robot-history/{{farmId}}", "host": ["{{baseUrl}}"], "path": ["api", "fakedataRoutes", "robot-history", "{{farmId}}"] }
+          }
+        },
+        {
+          "name": "Trigger fault (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"farm_id\": \"{{farmId}}\",\n  \"faultCode\": \"F1\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/fakedataRoutes/trigger-fault", "host": ["{{baseUrl}}"], "path": ["api", "fakedataRoutes", "trigger-fault"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Control (legacy Blynk)",
+      "item": [
+        {
+          "name": "Connection status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/control/{{farmId}}/connection", "host": ["{{baseUrl}}"], "path": ["api", "control", "{{farmId}}", "connection"] }
+          }
+        },
+        {
+          "name": "Readback (V10-V15)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/control/{{farmId}}/readback", "host": ["{{baseUrl}}"], "path": ["api", "control", "{{farmId}}", "readback"] }
+          }
+        },
+        {
+          "name": "Audit trail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/control/{{farmId}}/audit", "host": ["{{baseUrl}}"], "path": ["api", "control", "{{farmId}}", "audit"] }
+          }
+        }
+      ]
+    }
+  ]
+}
