@@ -223,3 +223,5 @@ const FarmMap = ({ botStatus, setCurrentView, setActiveFarmId }) => {
 };
 
 export default FarmMap;
+
+

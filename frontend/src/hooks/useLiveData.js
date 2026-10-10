@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 
-const API = 'http://localhost:5050';
+const API = process.env.REACT_APP_API_BASE || 'http://localhost:5050';
 const fetcher = (url) => fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(r)));
 
 // Live ThingSpeak snapshot for a farm, polled every 15s (matches server cache).
@@ -43,3 +43,6 @@ export function useConnection(farmId) {
     revalidateOnFocus: false,
   });
 }
+
+
+

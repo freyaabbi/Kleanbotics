@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const API = 'http://localhost:5050';
+const API = process.env.REACT_APP_API_BASE || 'http://localhost:5050';
 
 // Global ⌘K / Ctrl+K palette to jump to any farm / row / panel.
 // Opens on the keyboard shortcut or a window 'toggle-palette' event.
@@ -112,3 +112,6 @@ export default function CommandPalette({ onJump }) {
     </div>
   );
 }
+
+
+

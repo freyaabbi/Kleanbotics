@@ -44,3 +44,6 @@ export default function useHashRoute() {
 
   return route;
 }
+
+
+

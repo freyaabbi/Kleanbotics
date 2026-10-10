@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useConnection } from '../../hooks/useLiveData';
+import { authHeaders } from '../../auth';
 
 // LIVE/SIM chip + real hardware-connection dot (polls Blynk every 15s).
 function LiveBadge({ farm }) {
@@ -24,10 +25,7 @@ const FarmManager = ({ onFarmChange }) => {
     city: '',
     capacity: '',
     lat: '',
-    lng: '',
-    ts_channel_id: '',
-    ts_read_key: '',
-    blynk_token: ''
+    lng: ''
   });
   const [farms, setFarms] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -73,7 +71,7 @@ const FarmManager = ({ onFarmChange }) => {
   };
 
   const addFarm = async () => {
-    let { farm_id, name, city, capacity, lat, lng, ts_channel_id, ts_read_key, blynk_token } = newFarm;
+    let { farm_id, name, city, capacity, lat, lng } = newFarm;
     if (!farm_id || !name || !city || !capacity) {
       return alert("❌ Please fill in Farm ID, Name, City and Capacity");
     }
@@ -97,20 +95,32 @@ const FarmManager = ({ onFarmChange }) => {
     try {
       const res = await fetch('http://localhost:5050/api/farms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({
           farm_id,
           name,
           city,
           capacity: Number(capacity),
           lat: Number(lat),
-          lng: Number(lng),
-          ts_channel_id,
-          ts_read_key,
-          blynk_token
+          lng: Number(lng)
         })
       });
-      const result = await res.json();
+
+      // Read the body as text first so we can still show something useful
+      // when the server returns a non-JSON error page (502/504/HTML, etc.)
+      const raw = await res.text();
+      let result = {};
+      try {
+        result = raw ? JSON.parse(raw) : {};
+      } catch {
+        // Non-JSON response — surface the status + a snippet of the body.
+        throw new Error(`Server returned ${res.status} ${res.statusText}: ${raw.slice(0, 200) || '(empty response)'}`);
+      }
+
+      if (!res.ok) {
+        throw new Error(result.error || `Server returned ${res.status} ${res.statusText}`);
+      }
+
       if (result.success) {
         setNewFarm({
           farm_id: '',
@@ -118,17 +128,20 @@ const FarmManager = ({ onFarmChange }) => {
           city: '',
           capacity: '',
           lat: '',
-          lng: '',
-          ts_channel_id: '',
-          ts_read_key: '',
-          blynk_token: ''
+          lng: ''
         });
         loadFarms();
       } else {
         alert(`❌ Error: ${result.error || 'Failed to add farm'}`);
       }
     } catch (error) {
-      alert('❌ Failed to add farm');
+      // Distinguish a network/CORS failure (fetch rejects → TypeError) from
+      // a server-side error so the real cause is visible instead of hidden.
+      const msg = error instanceof TypeError
+        ? `Could not reach the server (network/CORS). ${error.message}`
+        : error.message;
+      console.error('addFarm failed:', error);
+      alert(`❌ Failed to add farm: ${msg}`);
     }
     setLoading(false);
   };
@@ -136,7 +149,7 @@ const FarmManager = ({ onFarmChange }) => {
   const deleteFarm = async (farmId) => {
     if (!window.confirm(`⚠️ Decommission unit '${farmId}'? This will permanently delete its metadata and historical packets.`)) return;
     try {
-      const res = await fetch(`http://localhost:5050/api/farms/${farmId}`, { method: 'DELETE' });
+      const res = await fetch(`http://localhost:5050/api/farms/${farmId}`, { method: 'DELETE', headers: authHeaders() });
       const result = await res.json();
       if (result.success) {
         loadFarms();
@@ -189,9 +202,9 @@ const FarmManager = ({ onFarmChange }) => {
             </div>
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">City / Place Location</label>
-              <div className="flex gap-2 mt-1">
+              <div className="flex gap-2 mt-1 w-full">
                 <input
-                  className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                  className="flex-1 min-w-0 bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                   placeholder="e.g. Chennai, Tamil Nadu"
                   value={newFarm.city}
                   onChange={e => { setNewFarm({ ...newFarm, city: e.target.value }); setGeoInfo(''); }}
@@ -200,7 +213,7 @@ const FarmManager = ({ onFarmChange }) => {
                   type="button"
                   onClick={autoLocate}
                   disabled={locating}
-                  className="shrink-0 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-50 cursor-pointer"
+                  className="shrink-0 px-3 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-black uppercase whitespace-nowrap disabled:opacity-50 cursor-pointer"
                   title="Find coordinates from the city name"
                 >
                   {locating ? '…' : '📍 Locate'}
@@ -243,38 +256,6 @@ const FarmManager = ({ onFarmChange }) => {
               </div>
             </div>
 
-            {/* Live integration (optional) — enables LIVE data via ThingSpeak/Blynk */}
-            <div className="pt-4 mt-2 border-t border-slate-100 space-y-4">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Integration <span className="text-slate-300 normal-case font-bold">(optional — leave blank for SIM)</span></p>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">ThingSpeak Channel ID</label>
-                <input
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 mt-1 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                  placeholder="e.g. 2145678"
-                  value={newFarm.ts_channel_id}
-                  onChange={e => setNewFarm({ ...newFarm, ts_channel_id: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">ThingSpeak Read Key <span className="text-slate-300 normal-case">(private channels)</span></label>
-                <input
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 mt-1 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                  placeholder="XXXXXXXXXXXXXXXX"
-                  value={newFarm.ts_read_key}
-                  onChange={e => setNewFarm({ ...newFarm, ts_read_key: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Blynk Device Token <span className="text-slate-300 normal-case">(control)</span></label>
-                <input
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 mt-1 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                  placeholder="Blynk auth token"
-                  value={newFarm.blynk_token}
-                  onChange={e => setNewFarm({ ...newFarm, blynk_token: e.target.value })}
-                />
-              </div>
-              <p className="text-[9px] font-medium text-slate-400 leading-relaxed">🔒 Keys are stored server-side and never sent to the browser. A channel id or token flips this node to <span className="font-black text-emerald-600">LIVE</span>.</p>
-            </div>
           </div>
 
           <button
@@ -349,3 +330,5 @@ const FarmManager = ({ onFarmChange }) => {
 };
 
 export default FarmManager;
+
+

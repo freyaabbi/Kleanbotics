@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { navigate } from '../../hooks/useHashRoute';
 import Breadcrumb from './Breadcrumb';
 
-const API = 'http://localhost:5050';
+const API = process.env.REACT_APP_API_BASE || 'http://localhost:5050';
 
 const STATUS_STYLE = {
   NORMAL: 'bg-emerald-50 border-emerald-200 text-emerald-700',
@@ -85,3 +85,6 @@ export default function PanelStrip({ farmId, rowNo }) {
     </div>
   );
 }
+
+
+

@@ -7,7 +7,7 @@ import Breadcrumb from './Breadcrumb';
 import { useToast } from '../common/Toast';
 import Skeleton from '../common/Skeleton';
 
-const API = 'http://localhost:5050';
+const API = process.env.REACT_APP_API_BASE || 'http://localhost:5050';
 
 const STATUS_BADGE = {
   OK: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -266,3 +266,6 @@ export default function PanelDetail({ panelId }) {
     </div>
   );
 }
+
+
+

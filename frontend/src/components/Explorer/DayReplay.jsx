@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { navigate } from '../../hooks/useHashRoute';
 import Breadcrumb from './Breadcrumb';
 
-const API = 'http://localhost:5050';
+const API = process.env.REACT_APP_API_BASE || 'http://localhost:5050';
 
 const isDown = (s) => s === 'FAULT' || s === 'MAINTENANCE' || s === 'OFFLINE';
 
@@ -136,3 +136,6 @@ export default function DayReplay({ farmId }) {
     </div>
   );
 }
+
+
+

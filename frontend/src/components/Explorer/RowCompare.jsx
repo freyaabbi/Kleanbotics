@@ -4,12 +4,13 @@ import {
 } from 'recharts';
 import Breadcrumb from './Breadcrumb';
 
-const API = 'http://localhost:5050';
+
+const API = process.env.REACT_APP_API_BASE || 'http://localhost:5050';
 const COLORS = ['#10b981', '#06b6d4', '#f59e0b', '#8b5cf6', '#ef4444'];
 const MAX = 5;
 
 export default function RowCompare({ farmId }) {
-  const [rows, setRows] = useState(null);        // all rows for the farm
+  const [rows, setRows] = useState(null);        // all rows for the farm   
   const [farmName, setFarmName] = useState(farmId);
   const [selected, setSelected] = useState([]);  // row_no[]
   const [series, setSeries] = useState(null);
@@ -139,3 +140,6 @@ export default function RowCompare({ farmId }) {
     </div>
   );
 }
+
+
+

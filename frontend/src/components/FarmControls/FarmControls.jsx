@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { authHeaders } from '../../auth';
 
 const FAULT_METADATA = {
   1: { name: "Over-Temperature", desc: "Temp > 65°C or < 24°C" },
@@ -118,7 +119,7 @@ const FarmControls = ({ botStatus, notifications, setNotifications, activeFarmId
     try {
       await fetch('http://localhost:5050/api/commands/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify(payload)
       });
       setNotifications(prev => [{
@@ -273,7 +274,7 @@ const FarmControls = ({ botStatus, notifications, setNotifications, activeFarmId
     try {
       await fetch('http://localhost:5050/api/fakedataRoutes/trigger-fault', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ farm_id: farmId, faultCode: faultCode })
       });
       setNotifications(prev => [{
@@ -598,3 +599,5 @@ const FarmControls = ({ botStatus, notifications, setNotifications, activeFarmId
 };
 
 export default FarmControls;
+
+

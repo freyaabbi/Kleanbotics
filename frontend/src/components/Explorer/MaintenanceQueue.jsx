@@ -3,7 +3,7 @@ import { navigate } from '../../hooks/useHashRoute';
 import Breadcrumb from './Breadcrumb';
 import { useToast } from '../common/Toast';
 
-const API = 'http://localhost:5050';
+const API = process.env.REACT_APP_API_BASE || 'http://localhost:5050';
 
 const STATUS_BADGE = {
   DEGRADED: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -145,3 +145,6 @@ export default function MaintenanceQueue({ farmId }) {
     </div>
   );
 }
+
+
+

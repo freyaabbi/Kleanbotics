@@ -6,15 +6,37 @@ import Reports from './components/Reports/Reports';
 import Alerts from './components/Alerts/Alerts';
 import FarmManager from './components/FarmManager/FarmManager';
 import Explorer from './components/Explorer/Explorer';
-import Integrations from './components/Integrations/Integrations';
 import Landing from './components/Landing/Landing';
 import { navigate } from './hooks/useHashRoute';
 import { ToastProvider } from './components/common/Toast';
 import CommandPalette from './components/common/CommandPalette';
+import { API } from './auth';
 import { isDark, toggleTheme } from './theme';
 
+// Demo seed: a client-side "Chennai South" unit so the Robot Monitor shows a
+// live (non-demo) card with working On/Off controls even when no backend is up.
+const CHENNAI_SOUTH_SEED = {
+  chennai_south: {
+    farm_name: 'Chennai South',
+    city: 'Chennai',
+    status: 'NORMAL',
+    error_code: 0,
+    battery_percentage: 82,
+    motor_speed: 0,
+    robot: {
+      motor_direction: 'STOP',
+      motor_pwm: 0,
+      power_state: 0,
+      rain_status: 0,
+      motor_status: 'IDLE',
+      obstacle_detected: 0,
+      alarm_active: 0,
+    },
+  },
+};
+
 function App() {
-  const [botStatus, setBotStatus] = useState({});
+  const [botStatus, setBotStatus] = useState(CHENNAI_SOUTH_SEED);
   const [notifications, setNotifications] = useState([]);
   const [currentView, setCurrentView] = useState('monitor'); 
   const [activeFarmId, setActiveFarmId] = useState('');
@@ -37,7 +59,8 @@ function App() {
         const response = await fetch('http://localhost:5050/api/fakedataRoutes/fake-data');
         if (!response.ok) throw new Error("Network response was not ok");
         const data = await response.json();
-        setBotStatus(data);
+        // Merge so the seeded Chennai South demo unit stays alongside live data.
+        setBotStatus((prev) => ({ ...prev, ...data }));
       } catch (err) {
         console.error("Backend connection failed:", err);
       }
@@ -47,32 +70,76 @@ function App() {
     return () => clearInterval(interval);
   }, [isLoggedIn]);
 
-  // Handle Login
-  const handleLogin = (e) => {
+  // Local command handler for the seeded Chennai South demo unit — mutates
+  // botStatus in place so On/Off (and other controls) visibly work with no backend.
+  const handleLocalCommand = (id, command, value) => {
+    setBotStatus((prev) => {
+      const bot = prev[id];
+      if (!bot) return prev;
+      const r = { ...bot.robot };
+      switch (command) {
+        case 'POWER':
+          r.power_state = value === 'ON' ? 1 : 0;
+          if (value !== 'ON') { r.motor_status = 'IDLE'; r.motor_pwm = 0; r.motor_direction = 'STOP'; }
+          break;
+        case 'CMD_START_CYCLE':
+          r.power_state = 1; r.motor_status = 'RUNNING'; r.motor_pwm = 200; r.motor_direction = 'FORWARD';
+          break;
+        case 'CMD_DOCK':
+          r.motor_status = 'IDLE'; r.motor_pwm = 0; r.motor_direction = 'STOP';
+          break;
+        case 'BUZZER':
+          r.alarm_active = value === 'ON' ? 1 : 0;
+          break;
+        case 'SET_DIR':
+          r.motor_direction = value;
+          break;
+        case 'SET_RPM':
+          r.motor_pwm = Math.round((Number(value) / 100) * 255);
+          break;
+        case 'RESET':
+          r.alarm_active = 0; r.obstacle_detected = 0;
+          break;
+        default:
+          break;
+      }
+      return { ...prev, [id]: { ...bot, robot: r, motor_speed: Math.round((r.motor_pwm / 255) * 60) } };
+    });
+  };
+
+  // Handle Login — the password is now validated server-side, which returns a
+  // signed JWT we store and attach to admin-only write requests.
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
 
-    if (loginRole === 'admin') {
-      if (password === 'admin') {
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("userRole", "admin");
-        setIsLoggedIn(true);
-        setUserRole("admin");
-        setCurrentView('monitor');
-      } else {
-        setLoginError('Invalid Administrator Password');
+    try {
+      const res = await fetch(`${API}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: loginRole, password }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setLoginError(data.message || 'Login failed');
+        return;
       }
-    } else {
+
+      localStorage.setItem("authToken", data.token);
       localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("userRole", "user");
+      localStorage.setItem("userRole", data.role);
       setIsLoggedIn(true);
-      setUserRole("user");
+      setUserRole(data.role);
       setCurrentView('monitor');
+    } catch (err) {
+      setLoginError('Could not reach the server. Is the backend running?');
     }
   };
 
   // Handle Logout
   const handleLogout = () => {
+    localStorage.removeItem("authToken");
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("userRole");
     setIsLoggedIn(false);
@@ -90,7 +157,6 @@ function App() {
     reports: <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
     manage: <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>,
     explorer: <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" /></svg>,
-    integrations: <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
     robot: <svg className="w-5 h-5 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="10" rx="2" strokeWidth="2" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8V5m0 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM9 13h.01M15 13h.01M2 12v2m20-2v2" /></svg>,
     logout: <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
   };
@@ -252,7 +318,7 @@ function App() {
           </button>
 
           <button onClick={() => setCurrentView('robot')} className={`w-full flex items-center whitespace-nowrap px-4 py-3 rounded-xl transition-all cursor-pointer border-l-[3px] ${currentView === 'robot' ? 'bg-soft text-accent font-bold border-accent' : 'border-transparent text-muted hover:bg-sunk hover:text-ink'}`}>
-            {icons.robot} <span>Robot Control & Monitor</span>
+            {icons.robot} <span>Control & Monitor</span>
           </button>
 
           {/* ADMIN ONLY TABS */}
@@ -263,9 +329,6 @@ function App() {
               </button>
               <button onClick={() => setCurrentView('manage')} className={`w-full flex items-center px-4 py-3 rounded-xl transition-all cursor-pointer border-l-[3px] ${currentView === 'manage' ? 'bg-soft text-accent font-bold border-accent' : 'border-transparent text-muted hover:bg-sunk hover:text-ink'}`}>
                 {icons.manage} Manage Farms
-              </button>
-              <button onClick={() => setCurrentView('integrations')} className={`w-full flex items-center px-4 py-3 rounded-xl transition-all cursor-pointer border-l-[3px] ${currentView === 'integrations' ? 'bg-soft text-accent font-bold border-accent' : 'border-transparent text-muted hover:bg-sunk hover:text-ink'}`}>
-                {icons.integrations} Integrations
               </button>
             </>
           )}
@@ -352,7 +415,7 @@ function App() {
             </div>
 
             <div className={currentView === 'robot' ? 'h-full overflow-y-auto' : 'hidden'}>
-              <RobotMonitor botStatus={botStatus} canControl={userRole === 'admin'} />
+              <RobotMonitor botStatus={botStatus} canControl={userRole === 'admin'} onLocalCommand={handleLocalCommand} localIds={['chennai_south']} />
             </div>
 
             {userRole === 'admin' && (
@@ -370,11 +433,6 @@ function App() {
                   }} />
                 </div>
 
-                {currentView === 'integrations' && (
-                  <div className="h-full overflow-y-auto animate-in fade-in duration-500">
-                    <Integrations />
-                  </div>
-                )}
               </>
             )}
 
@@ -408,3 +466,5 @@ function App() {
 }
 
 export default App;
+
+

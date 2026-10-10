@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { navigate } from '../../hooks/useHashRoute';
 import Skeleton from '../common/Skeleton';
 
-const API = 'http://localhost:5050';
+const API = process.env.REACT_APP_API_BASE || 'http://localhost:5050';
 
 export default function ExplorerHome() {
   const [farms, setFarms] = useState(null);
@@ -76,3 +76,6 @@ export default function ExplorerHome() {
     </div>
   );
 }
+
+
+

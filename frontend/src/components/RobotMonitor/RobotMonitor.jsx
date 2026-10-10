@@ -180,12 +180,17 @@ function PwmChart({ data }) {
 // ---------------------------------------------------------------------------
 // Controls (admin only, live robots only)
 // ---------------------------------------------------------------------------
-function Controls({ id, powerOn = false, online = true, alarmActive = false }) {
+function Controls({ id, powerOn = false, online = true, alarmActive = false, onLocal }) {
   const push = useToast();
   const [busy, setBusy] = useState(false);
   const [speed, setSpeed] = useState(45);
   const [mode, setMode] = useState('AUTO'); // last mode this session
   const [dir, setDir] = useState('FORWARD'); // last drive direction this session
+
+  // In local mode (seeded demo unit) commands update client state instead of
+  // hitting the backend, so On/Off works with no server running.
+  const dispatch = (command, value) =>
+    onLocal ? Promise.resolve(onLocal(id, command, value)) : sendRobotCommand(id, command, value);
 
   const run = async (label, fn) => {
     setBusy(true);
@@ -200,26 +205,26 @@ function Controls({ id, powerOn = false, online = true, alarmActive = false }) {
   };
 
   const setPower = (on) => run(`Power ${on ? 'ON' : 'OFF'}`,
-    () => sendRobotCommand(id, 'POWER', on ? 'ON' : 'OFF'));
+    () => dispatch('POWER', on ? 'ON' : 'OFF'));
 
   const setModeCmd = (m) => run(`${m === 'AUTO' ? 'Auto' : 'Manual'} mode`, async () => {
-    await sendRobotCommand(id, 'SET_MODE', m);
+    await dispatch('SET_MODE', m);
     setMode(m);
   });
 
   const sendSpeed = () => run(`Speed ${speed} rpm`, async () => {
-    await sendRobotCommand(id, 'SET_MODE', 'MANUAL');
-    await sendRobotCommand(id, 'SET_RPM', speed);
+    await dispatch('SET_MODE', 'MANUAL');
+    await dispatch('SET_RPM', speed);
     setMode('MANUAL');
   });
 
   const setDirCmd = (d) => run(`${d === 'FORWARD' ? 'Forward' : 'Reverse'} direction`, async () => {
-    await sendRobotCommand(id, 'SET_DIR', d);
+    await dispatch('SET_DIR', d);
     setDir(d);
   });
 
   const setBuzzer = (on) => run(`Buzzer ${on ? 'ON' : 'OFF'}`,
-    () => sendRobotCommand(id, 'BUZZER', on ? 'ON' : 'OFF'));
+    () => dispatch('BUZZER', on ? 'ON' : 'OFF'));
 
   const btn = 'px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-40 cursor-pointer';
   // small greyed helper label above each control group
@@ -252,11 +257,11 @@ function Controls({ id, powerOn = false, online = true, alarmActive = false }) {
       <div>
         <div className={grp}>Operation</div>
         <div className="flex flex-wrap items-center gap-2">
-          <button disabled={busy} onClick={() => run('Start Cycle', () => sendRobotCommand(id, 'CMD_START_CYCLE'))}
+          <button disabled={busy} onClick={() => run('Start Cycle', () => dispatch('CMD_START_CYCLE'))}
             className={`${btn} bg-soft text-accent hover:bg-accent hover:text-white`}>▶ Start Cleaning</button>
-          <button disabled={busy} onClick={() => run('Dock', () => sendRobotCommand(id, 'CMD_DOCK'))}
+          <button disabled={busy} onClick={() => run('Dock', () => dispatch('CMD_DOCK'))}
             className={`${btn} bg-sunk text-ink hover:bg-slate-200`}>■ Stop / Dock</button>
-          <button disabled={busy} onClick={() => run('Reset', () => sendRobotCommand(id, 'RESET'))}
+          <button disabled={busy} onClick={() => run('Reset', () => dispatch('RESET'))}
             className={`${btn} bg-sunk text-muted hover:text-ink`}>↺ Reset</button>
         </div>
       </div>
@@ -317,7 +322,7 @@ function Controls({ id, powerOn = false, online = true, alarmActive = false }) {
 // ---------------------------------------------------------------------------
 // Card
 // ---------------------------------------------------------------------------
-function RobotCard({ id, bot, canControl, demoSeries }) {
+function RobotCard({ id, bot, canControl, demoSeries, onLocal }) {
   const r = bot.robot || {};
   const isDemo = !!demoSeries;
   const online = bot.status !== 'OFFLINE';
@@ -400,7 +405,7 @@ function RobotCard({ id, bot, canControl, demoSeries }) {
 
       {/* controls (admin only; hidden in demo since commands have no target) */}
       {canControl && !isDemo && (
-        <Controls id={id} powerOn={!!r.power_state} online={online} alarmActive={!!r.alarm_active} />
+        <Controls id={id} powerOn={!!r.power_state} online={online} alarmActive={!!r.alarm_active} onLocal={onLocal} />
       )}
     </div>
   );
@@ -409,7 +414,7 @@ function RobotCard({ id, bot, canControl, demoSeries }) {
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
-export default function RobotMonitor({ botStatus = {}, canControl = false }) {
+export default function RobotMonitor({ botStatus = {}, canControl = false, onLocalCommand, localIds = [] }) {
   const realIds = Object.keys(botStatus);
   // Default to demo when nothing real is reporting, but let the user toggle.
   const [demo, setDemo] = useState(realIds.length === 0);
@@ -454,10 +459,14 @@ export default function RobotMonitor({ botStatus = {}, canControl = false }) {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {ids.map((id) => (
-            <RobotCard key={id} id={id} bot={source[id]} canControl={canControl} demoSeries={demo ? source[id].__series : undefined} />
+            <RobotCard key={id} id={id} bot={source[id]} canControl={canControl} demoSeries={demo ? source[id].__series : undefined}
+              onLocal={!demo && localIds.includes(id) ? onLocalCommand : undefined} />
           ))}
         </div>
       )}
     </div>
   );
 }
+
+
+

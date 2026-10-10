@@ -3,7 +3,7 @@ import { navigate } from '../../hooks/useHashRoute';
 import Breadcrumb from './Breadcrumb';
 import Skeleton from '../common/Skeleton';
 
-const API = 'http://localhost:5050';
+const API = process.env.REACT_APP_API_BASE || 'http://localhost:5050';
 
 const STATUS_STYLE = {
   NORMAL: 'bg-accent-fill',
@@ -151,3 +151,6 @@ export default function RowGrid({ farmId }) {
     </div>
   );
 }
+
+
+
